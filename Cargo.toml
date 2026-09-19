@@ -16,6 +16,8 @@ members = [
     "crates/ag-ui",
     "crates/plugin-gateway",
     "crates/skills-gateway",
+    "crates/redis-cache",
+    "crates/versioning",
     "crates/cli",
 ]
 

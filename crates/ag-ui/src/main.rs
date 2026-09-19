@@ -1,20 +1,20 @@
 use axum::{
-    extract::{Path, State, WebSocketUpgrade},
+    Json, Router,
     extract::ws::{Message, WebSocket},
+    extract::{Path, State, WebSocketUpgrade},
     http::StatusCode,
     response::sse::{Event, Sse},
     routing::{get, post},
-    Json, Router,
 };
 use futures::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
-use std::convert::Infallible;
 use std::collections::HashMap;
+use std::convert::Infallible;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt};
 use uuid::Uuid;
 
 // ═══════════════════════════════════════════════════════════════
@@ -26,19 +26,39 @@ use uuid::Uuid;
 #[serde(tag = "event", content = "data")]
 pub enum AgUiEvent {
     #[serde(rename = "agent.session.start")]
-    SessionStart { session_id: String, agent_id: String },
+    SessionStart {
+        session_id: String,
+        agent_id: String,
+    },
     #[serde(rename = "agent.text.delta")]
     TextDelta { session_id: String, delta: String },
     #[serde(rename = "agent.thought.delta")]
     ThoughtDelta { session_id: String, delta: String },
     #[serde(rename = "agent.tool.calling")]
-    ToolCalling { session_id: String, tool: String, parameters: serde_json::Value },
+    ToolCalling {
+        session_id: String,
+        tool: String,
+        parameters: serde_json::Value,
+    },
     #[serde(rename = "agent.tool.executed")]
-    ToolExecuted { session_id: String, tool: String, result: serde_json::Value, duration_ms: u64 },
+    ToolExecuted {
+        session_id: String,
+        tool: String,
+        result: serde_json::Value,
+        duration_ms: u64,
+    },
     #[serde(rename = "agent.state.changed")]
-    StateChanged { session_id: String, state: AgentState },
+    StateChanged {
+        session_id: String,
+        state: AgentState,
+    },
     #[serde(rename = "agent.hitl.request")]
-    HitlRequest { session_id: String, request_id: String, severity: String, action: HitlAction },
+    HitlRequest {
+        session_id: String,
+        request_id: String,
+        severity: String,
+        action: HitlAction,
+    },
     #[serde(rename = "agent.session.end")]
     SessionEnd { session_id: String },
 }
@@ -65,7 +85,11 @@ pub struct HitlAction {
 #[serde(tag = "event", content = "data")]
 pub enum ClientEvent {
     #[serde(rename = "client.hitl.response")]
-    HitlResponse { request_id: String, approved: bool, reason: Option<String> },
+    HitlResponse {
+        request_id: String,
+        approved: bool,
+        reason: Option<String>,
+    },
     #[serde(rename = "client.interrupt")]
     Interrupt { session_id: String },
     #[serde(rename = "client.message")]
@@ -153,14 +177,20 @@ async fn handle_socket(socket: WebSocket, store: SessionStore) {
             Message::Text(text) => {
                 if let Ok(event) = serde_json::from_str::<ClientEvent>(&text) {
                     match event {
-                        ClientEvent::HitlResponse { request_id, approved, reason } => {
+                        ClientEvent::HitlResponse {
+                            request_id,
+                            approved,
+                            reason,
+                        } => {
                             tracing::info!(request_id = %request_id, approved = approved, reason = ?reason, "HITL response received");
                             let response = serde_json::json!({
                                 "event": "hitl.processed",
                                 "request_id": request_id,
                                 "approved": approved
                             });
-                            let _ = sender.send(Message::Text(response.to_string().into())).await;
+                            let _ = sender
+                                .send(Message::Text(response.to_string().into()))
+                                .await;
                         }
                         ClientEvent::Interrupt { session_id } => {
                             tracing::info!(session_id = %session_id, "Client interrupted");
@@ -169,14 +199,19 @@ async fn handle_socket(socket: WebSocket, store: SessionStore) {
                                 session.state = AgentState::Interrupted;
                             }
                         }
-                        ClientEvent::Message { session_id, content } => {
+                        ClientEvent::Message {
+                            session_id,
+                            content,
+                        } => {
                             tracing::info!(session_id = %session_id, content = %content, "Client message");
                             // Echo back for now
                             let response = serde_json::json!({
                                 "event": "agent.text.delta",
                                 "data": { "session_id": session_id, "delta": format!("Received: {}", content) }
                             });
-                            let _ = sender.send(Message::Text(response.to_string().into())).await;
+                            let _ = sender
+                                .send(Message::Text(response.to_string().into()))
+                                .await;
                         }
                     }
                 }
@@ -196,7 +231,11 @@ async fn create_session(
     Json(req): Json<serde_json::Value>,
 ) -> Json<serde_json::Value> {
     let session_id = Uuid::new_v4().to_string();
-    let agent_id = req.get("agent_id").and_then(|v| v.as_str()).unwrap_or("default").to_string();
+    let agent_id = req
+        .get("agent_id")
+        .and_then(|v| v.as_str())
+        .unwrap_or("default")
+        .to_string();
 
     let session = Session {
         id: session_id.clone(),
@@ -214,18 +253,19 @@ async fn create_session(
     }))
 }
 
-async fn list_sessions(
-    State(store): State<SessionStore>,
-) -> Json<Vec<serde_json::Value>> {
+async fn list_sessions(State(store): State<SessionStore>) -> Json<Vec<serde_json::Value>> {
     let sessions = store.read().await;
-    let list: Vec<_> = sessions.values().map(|s| {
-        serde_json::json!({
-            "session_id": s.id,
-            "agent_id": s.agent_id,
-            "state": format!("{:?}", s.state).to_lowercase(),
-            "created_at": s.created_at.to_rfc3339()
+    let list: Vec<_> = sessions
+        .values()
+        .map(|s| {
+            serde_json::json!({
+                "session_id": s.id,
+                "agent_id": s.agent_id,
+                "state": format!("{:?}", s.state).to_lowercase(),
+                "created_at": s.created_at.to_rfc3339()
+            })
         })
-    }).collect();
+        .collect();
     Json(list)
 }
 
@@ -263,7 +303,9 @@ async fn emit_event(
                     _ => AgentState::Idle,
                 };
             }
-            Ok(Json(serde_json::json!({"status": "emitted", "session_id": session_id})))
+            Ok(Json(
+                serde_json::json!({"status": "emitted", "session_id": session_id}),
+            ))
         }
         None => Err(StatusCode::NOT_FOUND),
     }

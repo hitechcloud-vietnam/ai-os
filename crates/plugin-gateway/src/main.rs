@@ -1,14 +1,14 @@
 use axum::{
+    Json, Router,
     extract::{Path, State},
     http::StatusCode,
-    routing::{get, post, delete},
-    Json, Router,
+    routing::{delete, get, post},
 };
 use serde::{Deserialize, Serialize};
-use sqlx::{postgres::PgPoolOptions, PgPool};
+use sqlx::{PgPool, postgres::PgPoolOptions};
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt};
 use uuid::Uuid;
 
 // ═══════════════════════════════════════════════════════════════
@@ -215,7 +215,9 @@ async fn submit_plugin(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    Ok(Json(serde_json::json!({"status": "submitted", "plugin_id": id})))
+    Ok(Json(
+        serde_json::json!({"status": "submitted", "plugin_id": id}),
+    ))
 }
 
 async fn review_plugin(
@@ -223,21 +225,28 @@ async fn review_plugin(
     Path(id): Path<Uuid>,
     Json(req): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    let approved = req.get("approved").and_then(|v| v.as_bool()).unwrap_or(false);
+    let approved = req
+        .get("approved")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
     let new_state = if approved { "reviewed" } else { "draft" };
 
-    let result = sqlx::query("UPDATE plugins SET state = $1, updated_at = NOW() WHERE id = $2 AND state = 'submitted'")
-        .bind(new_state)
-        .bind(id)
-        .execute(&state.pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let result = sqlx::query(
+        "UPDATE plugins SET state = $1, updated_at = NOW() WHERE id = $2 AND state = 'submitted'",
+    )
+    .bind(new_state)
+    .bind(id)
+    .execute(&state.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     if result.rows_affected() == 0 {
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    Ok(Json(serde_json::json!({"status": new_state, "plugin_id": id})))
+    Ok(Json(
+        serde_json::json!({"status": new_state, "plugin_id": id}),
+    ))
 }
 
 async fn sign_plugin(
@@ -258,7 +267,9 @@ async fn sign_plugin(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    Ok(Json(serde_json::json!({"status": "signed", "plugin_id": id, "signature": signature})))
+    Ok(Json(
+        serde_json::json!({"status": "signed", "plugin_id": id, "signature": signature}),
+    ))
 }
 
 async fn publish_plugin(
@@ -275,7 +286,9 @@ async fn publish_plugin(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    Ok(Json(serde_json::json!({"status": "published", "plugin_id": id})))
+    Ok(Json(
+        serde_json::json!({"status": "published", "plugin_id": id}),
+    ))
 }
 
 async fn deprecate_plugin(
@@ -292,7 +305,9 @@ async fn deprecate_plugin(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    Ok(Json(serde_json::json!({"status": "deprecated", "plugin_id": id})))
+    Ok(Json(
+        serde_json::json!({"status": "deprecated", "plugin_id": id}),
+    ))
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -326,7 +341,9 @@ async fn install_plugin(
     let install_id = Uuid::new_v4();
 
     // Parse manifest for permissions
-    let permissions = plugin.manifest.get("permissions")
+    let permissions = plugin
+        .manifest
+        .get("permissions")
         .cloned()
         .unwrap_or_else(|| serde_json::json!([]));
 
@@ -348,15 +365,18 @@ async fn install_plugin(
         "Plugin installed"
     );
 
-    Ok((StatusCode::CREATED, Json(serde_json::json!({
-        "installation_id": install_id,
-        "plugin_id": id,
-        "plugin_name": plugin.name,
-        "version": plugin.version,
-        "scope": scope,
-        "permissions": permissions,
-        "status": "active"
-    }))))
+    Ok((
+        StatusCode::CREATED,
+        Json(serde_json::json!({
+            "installation_id": install_id,
+            "plugin_id": id,
+            "plugin_name": plugin.name,
+            "version": plugin.version,
+            "scope": scope,
+            "permissions": permissions,
+            "status": "active"
+        })),
+    ))
 }
 
 async fn uninstall_plugin(
@@ -425,8 +445,9 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!("Starting HiTechCloud Plugin Gateway v0.1.0");
 
-    let database_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgres://hitechcloud:hitechcloud_dev_2026@localhost:5432/hitechcloud".to_string());
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+        "postgres://hitechcloud:hitechcloud_dev_2026@localhost:5432/hitechcloud".to_string()
+    });
 
     let pool = PgPoolOptions::new()
         .max_connections(10)
@@ -450,7 +471,10 @@ async fn main() -> anyhow::Result<()> {
         .route("/pgw/v1/plugins/{id}/deprecate", post(deprecate_plugin))
         // Installations
         .route("/pgw/v1/install", post(install_plugin))
-        .route("/pgw/v1/uninstall/{plugin_id}/{org_id}", delete(uninstall_plugin))
+        .route(
+            "/pgw/v1/uninstall/{plugin_id}/{org_id}",
+            delete(uninstall_plugin),
+        )
         .route("/pgw/v1/installations", get(list_installations))
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())

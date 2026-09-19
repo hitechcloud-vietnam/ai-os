@@ -1,14 +1,14 @@
 use axum::{
+    Json, Router,
     extract::{Path, Query, State},
     http::StatusCode,
     routing::get,
-    Json, Router,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::{postgres::PgPoolOptions, PgPool};
+use sqlx::{PgPool, postgres::PgPoolOptions};
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt};
 use uuid::Uuid;
 
 // ═══════════════════════════════════════════════════════════════
@@ -77,8 +77,8 @@ fn parse_skill_md(content: &str) -> Result<(SkillFrontmatter, String), String> {
     let yaml_str = &rest[..end];
     let body = rest[end + 3..].trim().to_string();
 
-    let frontmatter: SkillFrontmatter = serde_yaml::from_str(yaml_str)
-        .map_err(|e| format!("Invalid YAML: {}", e))?;
+    let frontmatter: SkillFrontmatter =
+        serde_yaml::from_str(yaml_str).map_err(|e| format!("Invalid YAML: {}", e))?;
 
     Ok((frontmatter, body))
 }
@@ -105,7 +105,7 @@ async fn list_skills(
     Query(params): Query<ListParams>,
 ) -> Json<Vec<SkillRecord>> {
     let mut query = String::from(
-        "SELECT id, name, description, language, content, version, scope, org_id, triggers, requires_mcp, created_at, updated_at FROM skills WHERE 1=1"
+        "SELECT id, name, description, language, content, version, scope, org_id, triggers, requires_mcp, created_at, updated_at FROM skills WHERE 1=1",
     );
     let mut bind_values: Vec<String> = vec![];
 
@@ -116,7 +116,10 @@ async fn list_skills(
     if let Some(ref search) = params.search {
         let pattern = format!("%{}%", search);
         bind_values.push(pattern.clone());
-        query.push_str(&format!(" AND (name ILIKE '{}' OR description ILIKE '{}')", pattern, pattern));
+        query.push_str(&format!(
+            " AND (name ILIKE '{}' OR description ILIKE '{}')",
+            pattern, pattern
+        ));
     }
 
     query.push_str(" ORDER BY updated_at DESC NULLS LAST LIMIT 100");
@@ -171,7 +174,8 @@ async fn create_skill(
     let version = req.version.unwrap_or_else(|| "1.0.0".to_string());
 
     // If content is SKILL.md, parse frontmatter
-    let (final_name, final_desc, final_triggers, final_mcp) = if let Some(ref content) = req.content {
+    let (final_name, final_desc, final_triggers, final_mcp) = if let Some(ref content) = req.content
+    {
         if content.trim_start().starts_with("---") {
             match parse_skill_md(content) {
                 Ok((fm, _body)) => (
@@ -188,10 +192,20 @@ async fn create_skill(
                 ),
             }
         } else {
-            (req.name.clone(), req.description.clone(), req.triggers.clone(), req.requires_mcp.clone())
+            (
+                req.name.clone(),
+                req.description.clone(),
+                req.triggers.clone(),
+                req.requires_mcp.clone(),
+            )
         }
     } else {
-        (req.name.clone(), req.description.clone(), req.triggers.clone(), req.requires_mcp.clone())
+        (
+            req.name.clone(),
+            req.description.clone(),
+            req.triggers.clone(),
+            req.requires_mcp.clone(),
+        )
     };
 
     sqlx::query(
@@ -334,17 +348,20 @@ async fn suggest_skills(
     .await
     .unwrap_or_default();
 
-    let suggestions: Vec<serde_json::Value> = results.into_iter().map(|s| {
-        serde_json::json!({
-            "id": s.id,
-            "name": s.name,
-            "description": s.description,
-            "version": s.version,
-            "scope": s.scope,
-            "triggers": s.triggers,
-            "requires_mcp": s.requires_mcp,
+    let suggestions: Vec<serde_json::Value> = results
+        .into_iter()
+        .map(|s| {
+            serde_json::json!({
+                "id": s.id,
+                "name": s.name,
+                "description": s.description,
+                "version": s.version,
+                "scope": s.scope,
+                "triggers": s.triggers,
+                "requires_mcp": s.requires_mcp,
+            })
         })
-    }).collect();
+        .collect();
 
     Json(suggestions)
 }
@@ -363,7 +380,9 @@ async fn get_skill_content(
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
     .ok_or(StatusCode::NOT_FOUND)?;
 
-    Ok(skill.content.unwrap_or_else(|| "No content available".to_string()))
+    Ok(skill
+        .content
+        .unwrap_or_else(|| "No content available".to_string()))
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -395,8 +414,9 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!("Starting HiTechCloud Skills Gateway v0.1.0");
 
-    let database_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgres://hitechcloud:hitechcloud_dev_2026@localhost:5432/hitechcloud".to_string());
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+        "postgres://hitechcloud:hitechcloud_dev_2026@localhost:5432/hitechcloud".to_string()
+    });
 
     let pool = PgPoolOptions::new()
         .max_connections(10)
@@ -411,7 +431,10 @@ async fn main() -> anyhow::Result<()> {
         .route("/health", get(health))
         // Skill CRUD
         .route("/sgw/v1/skills", get(list_skills).post(create_skill))
-        .route("/sgw/v1/skills/{id}", get(get_skill).put(update_skill).delete(delete_skill))
+        .route(
+            "/sgw/v1/skills/{id}",
+            get(get_skill).put(update_skill).delete(delete_skill),
+        )
         .route("/sgw/v1/skills/{id}/content", get(get_skill_content))
         // Discovery
         .route("/sgw/v1/search", get(search_skills))
