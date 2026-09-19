@@ -1,3 +1,7 @@
+# ═══════════════════════════════════════════════════════════════
+#  HiTechCloud AI OS — .gitignore (SaaS Standard)
+# ═══════════════════════════════════════════════════════════════
+
 # Rust
 /target/
 **/*.rs.bk
@@ -5,21 +9,28 @@
 # Go
 /bin/
 /services/*/bin
+/services/*/vendor/
 
 # Logs & PIDs
 /logs/*.log
 /pids/*.pid
+*.log
 
-# Environment
+# Environment (NEVER commit secrets)
 .env
 .env.local
 .env.production
+.env.staging
+.env.*.local
+configs/*.local.toml
+configs/secrets/
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
+*~
 
 # OS
 .DS_Store
@@ -28,4 +39,17 @@ Thumbs.db
 # Build artifacts
 *.o
 *.so
+*.dylib
+*.dll
+*.exe
+
+# Test & Coverage
+coverage/
+*.profraw
+*.profdata
+
+# Temporary files
+tmp/
+temp/
+*.tmp
 *.dylib

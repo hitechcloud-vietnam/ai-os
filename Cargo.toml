@@ -1,18 +1,18 @@
 [workspace]
 resolver = "2"
 members = [
-    "common",
-    "signing",
-    "sandbox",
-    "adapter-anthropic",
-    "adapter-openai",
-    "registry",
-    "skills-service",
-    "plugin-service",
-    "mcp-gateway",
-    "ai-gateway",
-    "a2a-gateway",
-    "cli",
+    "crates/common",
+    "crates/signing",
+    "crates/sandbox",
+    "crates/adapter-anthropic",
+    "crates/adapter-openai",
+    "crates/registry",
+    "crates/skills-service",
+    "crates/plugin-service",
+    "crates/mcp-gateway",
+    "crates/ai-gateway",
+    "crates/a2a-gateway",
+    "crates/cli",
 ]
 
 [workspace.package]

@@ -4,6 +4,40 @@
 >
 > **License: MIT + Non-Commercial Clause** — See [LICENSE](LICENSE)
 
+## Project Structure (SaaS Standard)
+
+```
+HiTechCloud AI OS/
+├── crates/                    # Rust workspace crates
+│   ├── common/                #   Shared models, errors, RPC schemas
+│   ├── signing/               #   Ed25519 + SHA-256 package signing
+│   ├── sandbox/               #   Sandboxed command execution
+│   ├── adapter-anthropic/     #   SKILL.md parser, Claude Code format
+│   ├── adapter-openai/        #   MCP → OpenAI function schema
+│   ├── registry/              #   Package registry CRUD
+│   ├── skills-service/        #   Skills management
+│   ├── plugin-service/        #   Plugin management
+│   ├── mcp-gateway/           #   MCP JSON-RPC 2.0 + SSE
+│   ├── ai-gateway/            #   Main API (RBAC, Billing, Auth)
+│   ├── a2a-gateway/           #   Agent-to-Agent Protocol v1.0
+│   └── cli/                   #   hitechcloud CLI tool
+├── services/                  # Go microservices
+│   ├── admin-svc/             #   SaaS admin: Org/User/API Key
+│   ├── plugin-svc/            #   Plugin lifecycle
+│   └── skills-svc/            #   Skills CRUD + search
+├── deployments/               # Deployment configs (systemd, etc.)
+├── scripts/                   # DevOps scripts (setup, seed)
+├── configs/                   # Environment configs
+├── docs/                      # Documentation (OpenAPI spec)
+├── migrations/                # Database migrations (SQL)
+├── plans/                     # Architecture plans & specs
+├── .github/workflows/         # CI/CD pipeline
+├── Cargo.toml                 # Rust workspace root
+├── go.mod                     # Go module root
+├── Makefile                   # Build & run commands
+└── README.md
+```
+
 ## Architecture
 
 ```
@@ -145,30 +179,30 @@ GET  /audit-logs                            View audit logs
 6. Create Plugin:     POST /plugins {"name":"devtools","description":"..."}
 ```
 
-## Rust Workspace (11 Crates)
+## Rust Workspace (12 Crates)
 
-| Crate | Purpose |
-|-------|---------|
-| `common` | Shared models, errors, RPC schemas |
-| `signing` | Ed25519 + SHA-256 package signing |
-| `sandbox` | Sandboxed command execution |
-| `adapter-anthropic` | SKILL.md parser, Claude Code format |
-| `adapter-openai` | MCP → OpenAI function schema |
-| `registry` | Package registry CRUD (all entities) |
-| `skills-service` | Skills management |
-| `plugin-service` | Plugin management |
-| `mcp-gateway` | MCP JSON-RPC 2.0 + SSE router |
-| `ai-gateway` | Main API gateway (RBAC, Billing, Auth) |
-| `a2a-gateway` | A2A Protocol v1.0 (agents, tasks, streaming) |
-| `cli` | `hitechcloud` CLI tool |
+| Crate | Path | Purpose |
+|-------|------|---------|
+| `common` | `crates/common` | Shared models, errors, RPC schemas |
+| `signing` | `crates/signing` | Ed25519 + SHA-256 package signing |
+| `sandbox` | `crates/sandbox` | Sandboxed command execution |
+| `adapter-anthropic` | `crates/adapter-anthropic` | SKILL.md parser, Claude Code format |
+| `adapter-openai` | `crates/adapter-openai` | MCP → OpenAI function schema |
+| `registry` | `crates/registry` | Package registry CRUD (all entities) |
+| `skills-service` | `crates/skills-service` | Skills management |
+| `plugin-service` | `crates/plugin-service` | Plugin management |
+| `mcp-gateway` | `crates/mcp-gateway` | MCP JSON-RPC 2.0 + SSE router |
+| `ai-gateway` | `crates/ai-gateway` | Main API gateway (RBAC, Billing, Auth) |
+| `a2a-gateway` | `crates/a2a-gateway` | A2A Protocol v1.0 (agents, tasks, streaming) |
+| `cli` | `crates/cli` | `hitechcloud` CLI tool |
 
 ## Go Services
 
-| Service | Port | Purpose |
-|---------|------|---------|
-| `skills-svc` | 8082 | Skills CRUD + full-text search |
-| `plugin-svc` | 8083 | Plugin lifecycle management |
-| `admin-svc` | 8085 | SaaS admin: Org/User/API Key/Audit |
+| Service | Path | Port | Purpose |
+|---------|------|------|---------|
+| `admin-svc` | `services/admin-svc` | 8085 | SaaS admin: Org/User/API Key/Audit |
+| `plugin-svc` | `services/plugin-svc` | 8083 | Plugin lifecycle management |
+| `skills-svc` | `services/skills-svc` | 8082 | Skills CRUD + full-text search |
 
 ## CLI
 
