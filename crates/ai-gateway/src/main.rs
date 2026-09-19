@@ -4,7 +4,7 @@ use axum::{
     http::{StatusCode, header},
     middleware::{self, Next},
     response::Response,
-    routing::{get, post},
+    routing::{get, post, put},
 };
 use hitechcloud_common::models::HealthResponse;
 use sqlx::{PgPool, postgres::PgPoolOptions};
@@ -201,6 +201,23 @@ async fn main() -> anyhow::Result<()> {
         .route(
             "/v1/portal/revenue/earnings/{publisher_id}",
             get(hitechcloud_developer_portal::revenue::get_publisher_earnings),
+        )
+        // ── SSO/SCIM (Enterprise) ──
+        .route(
+            "/v1/enterprise/sso/{org_id}",
+            post(hitechcloud_developer_portal::sso::create_sso_config)
+                .get(hitechcloud_developer_portal::sso::get_sso_config)
+                .put(hitechcloud_developer_portal::sso::update_sso_config),
+        )
+        .route(
+            "/v1/enterprise/scim/{org_id}/users",
+            post(hitechcloud_developer_portal::sso::scim_create_user)
+                .get(hitechcloud_developer_portal::sso::scim_list_users),
+        )
+        .route(
+            "/v1/enterprise/scim/{org_id}/users/{user_id}",
+            put(hitechcloud_developer_portal::sso::scim_update_user)
+                .delete(hitechcloud_developer_portal::sso::scim_delete_user),
         )
         // ── Middleware ──
         .layer(middleware::from_fn_with_state(

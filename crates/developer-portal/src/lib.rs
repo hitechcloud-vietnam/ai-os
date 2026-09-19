@@ -8,6 +8,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 pub mod revenue;
+pub mod sso;
 
 // ═══════════════════════════════════════════════════════════════
 //  Developer Portal — Publisher & Review Management
