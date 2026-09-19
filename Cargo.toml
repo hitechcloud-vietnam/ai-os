@@ -1,16 +1,17 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/hitechcloud-common",
-    "crates/hitechcloud-signing",
-    "crates/hitechcloud-sandbox-runner",
-    "crates/hitechcloud-adapter-anthropic",
-    "crates/hitechcloud-adapter-openai",
-    "crates/hitechcloud-registry",
-    "crates/hitechcloud-skills-service",
-    "crates/hitechcloud-plugin-service",
-    "crates/hitechcloud-mcp-gateway",
-    "crates/hitechcloud-ai-gateway",
+    "common",
+    "signing",
+    "sandbox",
+    "adapter-anthropic",
+    "adapter-openai",
+    "registry",
+    "skills-service",
+    "plugin-service",
+    "mcp-gateway",
+    "ai-gateway",
+    "cli",
 ]
 
 [workspace.package]

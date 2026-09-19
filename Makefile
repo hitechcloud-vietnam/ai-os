@@ -21,9 +21,9 @@ build-rust:
 build-go:
 	@echo "🐹 Building Go services..."
 	@mkdir -p $(GO_BIN)
-	cd services/skills-svc && go build -o ../../$(GO_BIN)/skills-svc .
-	cd services/plugin-svc && go build -o ../../$(GO_BIN)/plugin-svc .
-	cd services/admin-svc  && go build -o ../../$(GO_BIN)/admin-svc .
+	cd skills-svc && go build -o ../$(GO_BIN)/skills-svc .
+	cd plugin-svc && go build -o ../$(GO_BIN)/plugin-svc .
+	cd admin-svc  && go build -o ../$(GO_BIN)/admin-svc .
 
 build: build-rust build-go
 	@echo "✅ All binaries built"

@@ -1,11 +1,11 @@
 [package]
-name = "hitechcloud-registry"
+name = "hitechcloud-skills-service"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
-hitechcloud-common = { path = "../hitechcloud-common" }
-hitechcloud-signing = { path = "../hitechcloud-signing" }
+hitechcloud-common = { path = "../common" }
+hitechcloud-adapter-anthropic = { path = "../adapter-anthropic" }
 tokio.workspace = true
 axum.workspace = true
 serde.workspace = true
@@ -13,6 +13,4 @@ serde_json.workspace = true
 sqlx.workspace = true
 tracing.workspace = true
 uuid.workspace = true
-chrono.workspace = true
 anyhow.workspace = true
-thiserror.workspace = true

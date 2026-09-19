@@ -1,0 +1,23 @@
+[package]
+name = "hitechcloud-cli"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[[bin]]
+name = "hitechcloud"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+colored = "2"
+anyhow = "1"
+toml = "0.8"
+dirs = "5"
+url = "2"
+serde_yaml = "0.9"
+hitechcloud-common = { path = "../common" }
