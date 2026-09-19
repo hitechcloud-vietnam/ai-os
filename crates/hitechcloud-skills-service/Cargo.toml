@@ -1,0 +1,16 @@
+[package]
+name = "hitechcloud-skills-service"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+hitechcloud-common = { path = "../hitechcloud-common" }
+hitechcloud-adapter-anthropic = { path = "../hitechcloud-adapter-anthropic" }
+tokio.workspace = true
+axum.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+anyhow.workspace = true

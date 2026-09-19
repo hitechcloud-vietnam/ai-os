@@ -1,0 +1,11 @@
+[package]
+name = "hitechcloud-adapter-openai"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+hitechcloud-common = { path = "../hitechcloud-common" }
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+anyhow.workspace = true

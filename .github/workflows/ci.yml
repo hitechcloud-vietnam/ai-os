@@ -1,0 +1,231 @@
+name: HiTechCloud AI OS CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  GO_VERSION: "1.24"
+  RUST_VERSION: "1.82"
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════
+  #  Rust workspace — build + test
+  # ═══════════════════════════════════════════════════════════════
+  rust-build:
+    name: Rust Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Clippy lints
+        run: cargo clippy --workspace -- -D warnings
+
+      - name: Build release
+        run: cargo build --release
+
+      - name: Run tests
+        run: cargo test --workspace
+
+      - name: Upload Rust binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-binaries
+          path: |
+            target/release/hitechcloud-ai-gateway
+            target/release/hitechcloud-mcp-gateway
+          retention-days: 7
+
+  # ═══════════════════════════════════════════════════════════════
+  #  Go services — build + test
+  # ═══════════════════════════════════════════════════════════════
+  go-build:
+    name: Go Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Go mod tidy
+        run: go mod tidy && git diff --exit-code go.mod go.sum
+
+      - name: Build skills-svc
+        run: cd services/skills-svc && go build -o ../../bin/skills-svc .
+
+      - name: Build plugin-svc
+        run: cd services/plugin-svc && go build -o ../../bin/plugin-svc .
+
+      - name: Build admin-svc
+        run: cd services/admin-svc && go build -o ../../bin/admin-svc .
+
+      - name: Run Go tests
+        run: |
+          cd services/skills-svc && go test -v ./...
+          cd ../../services/plugin-svc && go test -v ./...
+          cd ../../services/admin-svc && go test -v ./...
+
+      - name: Upload Go binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-binaries
+          path: bin/
+          retention-days: 7
+
+  # ═══════════════════════════════════════════════════════════════
+  #  Integration smoke test (with real Postgres + Redis)
+  # ═══════════════════════════════════════════════════════════════
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [rust-build, go-build]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: hitechcloud
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: hitechcloud_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgres://hitechcloud:test_password@localhost:5432/hitechcloud_test
+      REDIS_URL: redis://localhost:6379
+      AI_GATEWAY_PORT: "8080"
+      MCP_GATEWAY_PORT: "8081"
+      RUST_LOG: info
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Apply database schema
+        run: PGPASSWORD=test_password psql -h localhost -U hitechcloud -d hitechcloud_test -f migrations/001_initial_schema.sql
+
+      - name: Seed test data
+        run: PGPASSWORD=test_password psql -h localhost -U hitechcloud -d hitechcloud_test -f seed.sql
+
+      - name: Build all
+        run: |
+          cargo build --release
+          cd services/skills-svc && go build -o ../../bin/skills-svc .
+          cd ../plugin-svc && go build -o ../../bin/plugin-svc .
+          cd ../admin-svc && go build -o ../../bin/admin-svc .
+
+      - name: Start AI Gateway
+        run: |
+          target/release/hitechcloud-ai-gateway &
+          sleep 3
+
+      - name: Start MCP Gateway
+        run: |
+          target/release/hitechcloud-mcp-gateway &
+          sleep 2
+
+      - name: Start Go services
+        run: |
+          bin/skills-svc &
+          bin/plugin-svc &
+          bin/admin-svc &
+          sleep 2
+
+      - name: Health check — AI Gateway
+        run: curl -sf http://127.0.0.1:8080/health | jq .
+
+      - name: Health check — MCP Gateway
+        run: curl -sf http://127.0.0.1:8081/health | jq .
+
+      - name: Health check — Skills Service
+        run: curl -sf http://127.0.0.1:8082/health | jq .
+
+      - name: Health check — Plugin Service
+        run: curl -sf http://127.0.0.1:8083/health | jq .
+
+      - name: Health check — Admin Service
+        run: curl -sf http://127.0.0.1:8085/health | jq .
+
+      - name: Smoke — Create MCP Server
+        run: |
+          curl -sf -X POST http://127.0.0.1:8082/skills \
+            -H 'Content-Type: application/json' \
+            -d '{"name":"test-skill","scope":"public","description":"CI test skill"}' | jq .
+
+      - name: Smoke — List skills
+        run: curl -sf http://127.0.0.1:8082/skills | jq .
+
+      - name: Smoke — MCP JSON-RPC initialize
+        run: |
+          curl -sf -X POST http://127.0.0.1:8081/mcp/v1 \
+            -H 'Content-Type: application/json' \
+            -d '{"jsonrpc":"2.0","method":"initialize","id":1}' | jq .
+
+  # ═══════════════════════════════════════════════════════════════
+  #  License check
+  # ═══════════════════════════════════════════════════════════════
+  license-check:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify LICENSE exists
+        run: test -f LICENSE && echo "LICENSE file present"
+      - name: Verify non-commercial clause
+        run: grep -q "NON-COMMERCIAL CLAUSE" LICENSE && echo "Non-commercial clause present"
+
+  # ═══════════════════════════════════════════════════════════════
+  #  Security audit
+  # ═══════════════════════════════════════════════════════════════
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Cargo audit
+        run: cargo install cargo-audit && cargo audit
+      - name: Check for secrets in code
+        uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --only-verified
