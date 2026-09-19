@@ -12,6 +12,7 @@ members = [
     "crates/mcp-gateway",
     "crates/ai-gateway",
     "crates/a2a-gateway",
+    "crates/developer-portal",
     "crates/cli",
 ]
 

@@ -13,6 +13,7 @@ hitechcloud-registry = { path = "../registry" }
 hitechcloud-skills-service = { path = "../skills-service" }
 hitechcloud-plugin-service = { path = "../plugin-service" }
 hitechcloud-signing = { path = "../signing" }
+hitechcloud-developer-portal = { path = "../developer-portal" }
 tokio.workspace = true
 axum.workspace = true
 axum-extra.workspace = true
@@ -30,3 +31,4 @@ anyhow.workspace = true
 clap.workspace = true
 config.workspace = true
 dotenvy.workspace = true
+rand = "0.8"

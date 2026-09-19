@@ -14,6 +14,7 @@ use tracing_subscriber::{EnvFilter, fmt};
 
 mod billing;
 mod config;
+mod observability;
 mod rbac;
 mod routes;
 
@@ -164,12 +165,36 @@ async fn main() -> anyhow::Result<()> {
             get(billing::get_usage_summary),
         )
         .route("/v1/billing/pricing", get(billing::list_pricing))
+        // ── Developer Portal ──
+        .route(
+            "/v1/portal/publishers",
+            post(hitechcloud_developer_portal::create_publisher)
+                .get(hitechcloud_developer_portal::list_publishers),
+        )
+        .route(
+            "/v1/portal/publishers/{id}",
+            get(hitechcloud_developer_portal::get_publisher),
+        )
+        .route(
+            "/v1/portal/reviews",
+            post(hitechcloud_developer_portal::submit_for_review)
+                .get(hitechcloud_developer_portal::list_reviews),
+        )
+        .route(
+            "/v1/portal/reviews/{id}",
+            get(hitechcloud_developer_portal::get_review),
+        )
+        .route(
+            "/v1/portal/reviews/{id}/action",
+            post(hitechcloud_developer_portal::review_action),
+        )
         // ── Middleware ──
         .layer(middleware::from_fn_with_state(
             pool.clone(),
             rbac::rbac_middleware,
         ))
         .layer(middleware::from_fn_with_state(auth_state, auth_middleware))
+        .layer(middleware::from_fn(observability::observability_middleware))
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
         .with_state(pool);
