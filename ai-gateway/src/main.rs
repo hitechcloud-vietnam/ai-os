@@ -12,7 +12,9 @@ use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{fmt, EnvFilter};
 
+mod billing;
 mod config;
+mod rbac;
 mod routes;
 
 #[derive(Clone)]
@@ -83,7 +85,12 @@ async fn main() -> anyhow::Result<()> {
         .route("/v1/admin/orgs", get(routes::admin::list_orgs))
         .route("/v1/admin/orgs/{org_id}/members", get(routes::admin::get_members))
         .route("/v1/admin/orgs/{org_id}/audit-logs", get(routes::admin::get_audit_logs))
+        // ── Billing & Usage ──
+        .route("/v1/billing/usage", post(billing::record_usage))
+        .route("/v1/billing/usage/{org_id}", get(billing::get_usage_summary))
+        .route("/v1/billing/pricing", get(billing::list_pricing))
         // ── Middleware ──
+        .layer(middleware::from_fn_with_state(pool.clone(), rbac::rbac_middleware))
         .layer(middleware::from_fn_with_state(auth_state, auth_middleware))
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
