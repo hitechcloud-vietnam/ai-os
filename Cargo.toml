@@ -14,6 +14,8 @@ members = [
     "crates/a2a-gateway",
     "crates/developer-portal",
     "crates/ag-ui",
+    "crates/plugin-gateway",
+    "crates/skills-gateway",
     "crates/cli",
 ]
 

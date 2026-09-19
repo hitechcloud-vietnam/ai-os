@@ -34,13 +34,15 @@ build: build-rust build-go
 
 start: build
 	@echo "🚀 Starting HiTechCloud AI OS..."
-	@echo "  Ports: 8080(AI) 8081(MCP) 8082(Skills) 8083(Plugin) 8084(A2A) 8085(Admin) 8086(AG-UI)"
+	@echo "  Ports: 8080(AI) 8081(MCP) 8082(Skills) 8083(Plugin) 8084(A2A) 8085(Admin) 8086(AG-UI) 8087(PluginGW) 8088(SkillsGW)"
 	@mkdir -p logs pids
 	@if [ -f .env ]; then set -a && source .env && set +a; fi; \
-	nohup $(RUST_BIN)/hitechcloud-ai-gateway   > logs/ai-gateway.log   2>&1 & echo $$! > pids/ai-gateway.pid; \
-	nohup $(RUST_BIN)/hitechcloud-mcp-gateway  > logs/mcp-gateway.log  2>&1 & echo $$! > pids/mcp-gateway.pid; \
-	nohup $(RUST_BIN)/hitechcloud-a2a-gateway  > logs/a2a-gateway.log  2>&1 & echo $$! > pids/a2a-gateway.pid; \
-	nohup $(RUST_BIN)/hitechcloud-ag-ui        > logs/ag-ui.log        2>&1 & echo $$! > pids/ag-ui.pid; \
+	nohup $(RUST_BIN)/hitechcloud-ai-gateway       > logs/ai-gateway.log       2>&1 & echo $$! > pids/ai-gateway.pid; \
+	nohup $(RUST_BIN)/hitechcloud-mcp-gateway       > logs/mcp-gateway.log      2>&1 & echo $$! > pids/mcp-gateway.pid; \
+	nohup $(RUST_BIN)/hitechcloud-a2a-gateway       > logs/a2a-gateway.log      2>&1 & echo $$! > pids/a2a-gateway.pid; \
+	nohup $(RUST_BIN)/hitechcloud-ag-ui             > logs/ag-ui.log            2>&1 & echo $$! > pids/ag-ui.pid; \
+	nohup $(RUST_BIN)/hitechcloud-plugin-gateway    > logs/plugin-gateway.log   2>&1 & echo $$! > pids/plugin-gateway.pid; \
+	nohup $(RUST_BIN)/hitechcloud-skills-gateway    > logs/skills-gateway.log   2>&1 & echo $$! > pids/skills-gateway.pid; \
 	nohup $(GO_BIN)/skills-svc  > logs/skills-svc.log  2>&1 & echo $$! > pids/skills-svc.pid; \
 	nohup $(GO_BIN)/plugin-svc  > logs/plugin-svc.log  2>&1 & echo $$! > pids/plugin-svc.pid; \
 	nohup $(GO_BIN)/admin-svc   > logs/admin-svc.log   2>&1 & echo $$! > pids/admin-svc.pid; \
@@ -48,7 +50,7 @@ start: build
 
 stop:
 	@echo "⏹ Stopping services..."
-	@for svc in ai-gateway mcp-gateway a2a-gateway ag-ui skills-svc plugin-svc admin-svc; do \
+	@for svc in ai-gateway mcp-gateway a2a-gateway ag-ui plugin-gateway skills-gateway skills-svc plugin-svc admin-svc; do \
 		if [ -f pids/$$svc.pid ]; then \
 			kill $$(cat pids/$$svc.pid) 2>/dev/null && echo "  Stopped $$svc" || true; \
 			rm -f pids/$$svc.pid; \
@@ -75,6 +77,9 @@ health:
 	@curl -sf http://127.0.0.1:8083/health | python3 -m json.tool && echo "  ✅ Plugin Service" || echo "  ❌ Plugin DOWN"
 	@curl -sf http://127.0.0.1:8084/health | python3 -m json.tool && echo "  ✅ A2A Gateway"    || echo "  ❌ A2A DOWN"
 	@curl -sf http://127.0.0.1:8085/health | python3 -m json.tool && echo "  ✅ Admin Service"  || echo "  ❌ Admin DOWN"
+	@curl -sf http://127.0.0.1:8086/health | python3 -m json.tool && echo "  ✅ AG-UI"          || echo "  ❌ AG-UI DOWN"
+	@curl -sf http://127.0.0.1:8087/health | python3 -m json.tool && echo "  ✅ Plugin Gateway" || echo "  ❌ Plugin GW DOWN"
+	@curl -sf http://127.0.0.1:8088/health | python3 -m json.tool && echo "  ✅ Skills Gateway" || echo "  ❌ Skills GW DOWN"
 
 seed:
 	PGPASSWORD='$(DB_PASSWORD)' psql -h $(DB_HOST) -U $(DB_USER) -d $(DB_NAME) -f seed.sql
