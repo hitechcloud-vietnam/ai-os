@@ -10,9 +10,11 @@ pub async fn check() -> Result<()> {
     println!("{}", "─".repeat(50));
 
     let mcp_url = gateway_url.replace(":8080", ":8081");
+    let a2a_url = gateway_url.replace(":8080", ":8084");
     let services: Vec<(&str, &str)> = vec![
         ("AI Gateway", &gateway_url),
         ("MCP Gateway", &mcp_url),
+        ("A2A Gateway", &a2a_url),
     ];
 
     let client = reqwest::Client::builder()
