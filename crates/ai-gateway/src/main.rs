@@ -188,6 +188,20 @@ async fn main() -> anyhow::Result<()> {
             "/v1/portal/reviews/{id}/action",
             post(hitechcloud_developer_portal::review_action),
         )
+        // ── Revenue Share ──
+        .route(
+            "/v1/portal/revenue/configs",
+            post(hitechcloud_developer_portal::revenue::create_revenue_share)
+                .get(hitechcloud_developer_portal::revenue::list_revenue_shares),
+        )
+        .route(
+            "/v1/portal/revenue/record",
+            post(hitechcloud_developer_portal::revenue::record_revenue),
+        )
+        .route(
+            "/v1/portal/revenue/earnings/{publisher_id}",
+            get(hitechcloud_developer_portal::revenue::get_publisher_earnings),
+        )
         // ── Middleware ──
         .layer(middleware::from_fn_with_state(
             pool.clone(),

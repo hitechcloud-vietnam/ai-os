@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 
+pub mod revenue;
+
 // ═══════════════════════════════════════════════════════════════
 //  Developer Portal — Publisher & Review Management
 // ═══════════════════════════════════════════════════════════════
