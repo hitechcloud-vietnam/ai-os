@@ -11,6 +11,7 @@ members = [
     "plugin-service",
     "mcp-gateway",
     "ai-gateway",
+    "a2a-gateway",
     "cli",
 ]
 
