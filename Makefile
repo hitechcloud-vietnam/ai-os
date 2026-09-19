@@ -34,12 +34,13 @@ build: build-rust build-go
 
 start: build
 	@echo "🚀 Starting HiTechCloud AI OS..."
-	@echo "  Ports: 8080(AI) 8081(MCP) 8082(Skills) 8083(Plugin) 8084(A2A) 8085(Admin)"
+	@echo "  Ports: 8080(AI) 8081(MCP) 8082(Skills) 8083(Plugin) 8084(A2A) 8085(Admin) 8086(AG-UI)"
 	@mkdir -p logs pids
 	@if [ -f .env ]; then set -a && source .env && set +a; fi; \
 	nohup $(RUST_BIN)/hitechcloud-ai-gateway   > logs/ai-gateway.log   2>&1 & echo $$! > pids/ai-gateway.pid; \
 	nohup $(RUST_BIN)/hitechcloud-mcp-gateway  > logs/mcp-gateway.log  2>&1 & echo $$! > pids/mcp-gateway.pid; \
 	nohup $(RUST_BIN)/hitechcloud-a2a-gateway  > logs/a2a-gateway.log  2>&1 & echo $$! > pids/a2a-gateway.pid; \
+	nohup $(RUST_BIN)/hitechcloud-ag-ui        > logs/ag-ui.log        2>&1 & echo $$! > pids/ag-ui.pid; \
 	nohup $(GO_BIN)/skills-svc  > logs/skills-svc.log  2>&1 & echo $$! > pids/skills-svc.pid; \
 	nohup $(GO_BIN)/plugin-svc  > logs/plugin-svc.log  2>&1 & echo $$! > pids/plugin-svc.pid; \
 	nohup $(GO_BIN)/admin-svc   > logs/admin-svc.log   2>&1 & echo $$! > pids/admin-svc.pid; \
@@ -47,7 +48,7 @@ start: build
 
 stop:
 	@echo "⏹ Stopping services..."
-	@for svc in ai-gateway mcp-gateway a2a-gateway skills-svc plugin-svc admin-svc; do \
+	@for svc in ai-gateway mcp-gateway a2a-gateway ag-ui skills-svc plugin-svc admin-svc; do \
 		if [ -f pids/$$svc.pid ]; then \
 			kill $$(cat pids/$$svc.pid) 2>/dev/null && echo "  Stopped $$svc" || true; \
 			rm -f pids/$$svc.pid; \

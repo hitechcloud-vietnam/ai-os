@@ -13,6 +13,7 @@ members = [
     "crates/ai-gateway",
     "crates/a2a-gateway",
     "crates/developer-portal",
+    "crates/ag-ui",
     "crates/cli",
 ]
 
